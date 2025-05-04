@@ -1,0 +1,95 @@
+#!/bin/bash
+
+set -e
+
+echo "Starting installation..."
+
+# Install Spotify
+echo "Installing Spotify..."
+# Add Spotify repository key
+curl -sS https://download.spotify.com/debian/pubkey_C85668DF69375001.gpg | sudo gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/spotify.gpg
+
+# Add Spotify repository
+echo "deb https://repository.spotify.com stable non-free" | sudo tee /etc/apt/sources.list.d/spotify.list
+
+# Update package list
+sudo apt-get update
+
+# Install Spotify client
+sudo apt-get install -y spotify-client
+
+echo "Before applying Spicetify, you need to gain write permission on Spotify files"
+sudo chmod a+wr /usr/share/spotify
+sudo chmod a+wr /usr/share/spotifyApps -R
+
+# Install Spicetify CLI
+echo "Installing Spicetify CLI..."
+curl -fsSL https://raw.githubusercontent.com/spicetify/cli/main/install.sh | sh
+
+# Install Spicetify Marketplace
+echo "Installing Spicetify Marketplace..."
+curl -fsSL https://raw.githubusercontent.com/spicetify/marketplace/main/resources/install.sh | sh
+
+# Clone Spicetify themes
+echo "Cloning Spicetify themes..."
+git clone --depth=1 https://github.com/spicetify/spicetify-themes.git ~/spicetify-themes
+
+# Ensure Spicetify config directory exists
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/spicetify"
+THEMES_DIR="$CONFIG_DIR/Themes"
+mkdir -p "$THEMES_DIR"
+
+# Copy themes
+echo "Copying themes to Spicetify Themes directory..."
+cp -r ~/spicetify-themes/* "$THEMES_DIR/"
+
+# Install additional themes and scripts
+echo "Installing additional themes and scripts..."
+#  Clone catppuccin theme
+git clone https://github.com/catppuccin/spicetify.git ~/catppuccin-theme
+cp -r ~/catppuccin-theme ~/.config/spicetify/Themes/
+
+# Configure Spicetify with the new theme
+spicetify config current_theme catppuccin
+spicetify config color_scheme frappe
+spicetify config inject_css 1
+spicetify config inject_theme_js 1
+spicetify config replace_colors 1
+spicetify config overwrite_assets 1
+
+# Apply Spicetify changes
+echo "Applying Spicetify configurations..."
+spicetify apply
+
+# Install additional themes/scripts (optional)
+#  Install Bloom
+curl -fsSL https://raw.githubusercontent.com/nimsandu/spicetify-bloom/main/install/install.sh | bash
+
+#  Install Nord-Spotify
+curl -fsSL https://raw.githubusercontent.com/Tetrax-10/Nord-Spotify/master/install-scripts/install.sh | sh
+
+#  Install Dribbblish theme
+curl -fsSL https://raw.githubusercontent.com/JulienMaille/dribbblish-dynamic-theme/master/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/JulienMaille/dribbblish-dynamic-theme/master/patch-dark-mode.sh | sh
+curl -fsSL https://raw.githubusercontent.com/JulienMaille/dribbblish-dynamic-theme/master/uninstall.sh | sh
+
+#  Lucid theme
+curl -fsSL https://raw.githubusercontent.com/sanoojes/Spicetify-Lucid/main/install/install.sh | sh
+
+# Clone additional themes (e.g., Gruvify)
+echo "Cloning Gruvify theme..."
+git clone https://github.com/Skaytacium/Gruvify ~/Gruvify
+# Compile Sass if needed
+cd ~/Gruvify
+npm install -g sass
+sass user.sass user.css
+
+# Clone Dracula theme
+git clone https://github.com/dracula/spicetify.git ~/dracula-spicetify
+# Copy theme folder to Spicetify themes directory
+cp -r ~/dracula-spicetify ~/.config/spicetify/Themes/
+
+# Install Marketplace
+curl -fsSL https://raw.githubusercontent.com/spicetify/spicetify-marketplace/main/resources/install.sh | sh
+
+echo "Installation complete! Remember to restart Spotify and run 'spicetify apply' if needed."

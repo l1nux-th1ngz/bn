@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Define the path to the sources.list file
+SOURCE_LIST="/etc/apt/sources.list"
+
+# Check if the sources.list file exists
+if [ -f "$SOURCE_LIST" ]; then
+    # Remove the existing sources.list file
+    rm -f "$SOURCE_LIST"
+fi
+
+# Create "Custom" sources.list
+cat <<EOL > "$SOURCE_LIST"
+deb https://fasttrack.debian.net/debian-fasttrack/ bookworm-fasttrack main contrib non-free
+deb https://ftp.debian.org/debian/ bookworm contrib main non-free non-free-firmware
+deb https://ftp.debian.org/debian/ bookworm-updates contrib main non-free non-free-firmware
+deb https://ftp.debian.org/debian/ bookworm-proposed-updates contrib main non-free non-free-firmware
+deb https://ftp.debian.org/debian/ bookworm-backports contrib main non-free non-free-firmware
+deb https://deb.debian.org/debian-security bookworm-security contrib main non-free-firmware
+EOL
+
+# Add VirtualBox repo and key
+wget -O- -q https://www.virtualbox.org/download/oracle_vbox_2016.asc | sudo gpg --dearmour -o /usr/share/keyrings/oracle_vbox_2016.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/oracle_vbox_2016.gpg] http://download.virtualbox.org/virtualbox/debian bookworm contrib" | sudo tee /etc/apt/sources.list.d/virtualbox.list
+
+# Update 
+sudo apt-get update
+
+
+
+# Done
+echo "The APT sources lists have been updated successfully."
+echo "Please log out and log back in for the group membership change to take effect."

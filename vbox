@@ -1,0 +1,55 @@
+#!/bin/bash
+set -e
+
+# Ensure the script is run with root privileges
+if [ "$EUID" -ne 0 ]; then
+    echo "Please run this script with sudo."
+    exit 1
+fi
+
+echo "Updating package lists..."
+apt-get update
+
+echo "Installing necessary headers and dkms..."
+apt-get -y install linux-headers-$(uname -r) dkms
+
+VBOX_VERSION="7.1.8"
+
+echo "Downloading VirtualBox package version $VBOX_VERSION..."
+wget "https://download.virtualbox.org/virtualbox/$VBOX_VERSION/virtualbox-${VBOX_VERSION}_${VBOX_VERSION}-168469~Debian~bookworm_amd64.deb"
+
+echo "Installing VirtualBox package..."
+dpkg -i virtualbox-${VBOX_VERSION}_${VBOX_VERSION}-168469~Debian~bookworm_amd64.deb
+# Fix potential dependency issues after dpkg
+apt-get -y --fix-broken install
+
+echo "Downloading VirtualBox Extension Pack version $VBOX_VERSION..."
+wget "https://download.virtualbox.org/virtualbox/$VBOX_VERSION/Oracle_VirtualBox_Extension_Pack-${VBOX_VERSION}.vbox-extpack"
+
+echo "Installing VirtualBox Extension Pack..."
+vboxmanage extpack install Oracle_VirtualBox_Extension_Pack-${VBOX_VERSION}.vbox-extpack
+
+# Check if vboxusers group exists, create if not
+if ! getent group vboxusers > /dev/null; then
+    echo "Group 'vboxusers' does not exist. Creating it..."
+    groupadd vboxusers
+fi
+
+# Prompt for username to add to vboxusers
+read -p "Enter the username who will use VirtualBox (to add to the 'vboxusers' group): " VBOX_USER
+
+# Validate if the user exists
+if ! id -u "$VBOX_USER" > /dev/null 2>&1; then
+    echo "Error: User '$VBOX_USER' does not exist."
+    exit 1
+fi
+
+# Add the specified user to the vboxusers group
+echo "Adding user '$VBOX_USER' to the 'vboxusers' group..."
+usermod -a -G vboxusers "$VBOX_USER"
+
+echo "Installing virtualbox-guest-additions-iso..."
+apt-get -y install virtualbox-guest-additions-iso
+
+echo "VirtualBox installation complete."
+echo "Please log out and log back in (or reboot) for the user '$VBOX_USER' to be able to use VirtualBox."

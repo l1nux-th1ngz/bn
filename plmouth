@@ -1,0 +1,114 @@
+#!/bin/bash
+
+# Function to check if the script is run as root
+check_root() {
+  if [ "$EUID" -ne 0 ]; then
+    echo "Please run this script as root."
+    exit 1
+  fi
+}
+
+# Function to back up a file
+backup_file() {
+  local file="$1"
+  if [ -f "$file" ]; then
+    cp "$file" "$file.bak.$(date +%Y%m%d_%H%M%S)"
+    echo "Backed up $file to $file.bak.$(date +%Y%m%d_%H%M%S)"
+  fi
+}
+
+# Main script execution starts here
+
+check_root
+
+echo "Updating package list and installing necessary packages..."
+apt update
+apt install -y plymouth plymouth-x11 plymouth-label libplymouth5 plymouth-themes v86d hwinfo git
+
+# Check if installation was successful
+if [ $? -ne 0 ]; then
+  echo "Error installing necessary packages. Exiting."
+  exit 1
+fi
+
+# Create themes directory if it doesn't exist (apt should handle this, but good to be sure)
+themes_dir="/usr/share/plymouth/themes"
+mkdir -p "$themes_dir"
+
+# Clone the Plymouth themes repository to a temporary directory
+temp_clone_dir=$(mktemp -d)
+repo_url="https://github.com/MrVivekRajan/Plymouth-Themes.git"
+echo "Cloning themes repository to temporary directory..."
+git clone "$repo_url" "$temp_clone_dir"
+
+if [ $? -ne 0 ]; then
+  echo "Error cloning themes repository. Exiting."
+  rm -rf "$temp_clone_dir"
+  exit 1
+fi
+
+# List available themes from the cloned repository
+echo "Available themes in the repository:"
+find "$temp_clone_dir" -maxdepth 1 -mindepth 1 -type d -printf "%f\n"
+
+# Prompt user to select a theme
+read -p "Enter the name of the Plymouth theme you want to use: " theme_name
+
+# Validate the theme name
+if [ ! -d "$temp_clone_dir/$theme_name" ]; then
+  echo "Error: Theme '$theme_name' not found in the repository. Exiting."
+  rm -rf "$temp_clone_dir"
+  exit 1
+fi
+
+# Copy the selected theme to the themes directory
+echo "Copying theme '$theme_name' to themes directory..."
+cp -r "$temp_clone_dir/$theme_name" "$themes_dir/"
+
+# Clean up the temporary clone directory
+rm -rf "$temp_clone_dir"
+
+# Edit GRUB configuration
+echo "Editing /etc/default/grub..."
+backup_file "/etc/default/grub"
+
+# Use sed to modify GRUB_CMDLINE_LINUX_DEFAULT and GRUB_GFXMODE
+# Add comments explaining why these changes are made
+sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/c\GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"' /etc/default/grub
+sed -i '/^GRUB_GFXMODE=/c\GRUB_GFXMODE=1920x1080' /etc/default/grub # Consider making this configurable or informing the user
+
+echo "GRUB configuration updated."
+echo "Note: You may need to manually adjust GRUB_CMDLINE_LINUX_DEFAULT and GRUB_GFXMODE in /etc/default/grub based on your system and preferences."
+echo "  - 'quiet splash' enables Plymouth."
+echo "  - GRUB_GFXMODE sets the resolution for the boot menu and potentially Plymouth."
+
+# Update GRUB
+echo "Updating GRUB..."
+update-grub
+echo "GRUB updated."
+
+# Set the default Plymouth theme
+echo "Setting '$theme_name' as the default Plymouth theme..."
+plymouth-set-default-theme "$theme_name"
+
+# Update initramfs (crucial for Plymouth to work during boot)
+echo "Updating initramfs..."
+update-initramfs -u
+
+# Test the current Plymouth theme
+echo "Testing the current Plymouth theme (will display for 10 seconds)..."
+plymouthd; plymouth --show-splash; sleep 10; plymouth quit
+echo "Plymouth test finished."
+
+read -p "Did the Plymouth test show the expected theme correctly? (y/n): " test_result
+
+if [[ "$test_result" =~ ^[Nn]$ ]]; then
+  echo "Plymouth test failed. You may need to troubleshoot the theme or your system configuration."
+  echo "Common issues include incorrect GRUB settings, missing dependencies, or theme compatibility problems."
+  echo "Consider checking logs or searching for solutions related to your specific distribution and theme."
+else
+  echo "Plymouth test was successful (or user indicated it was)."
+fi
+
+echo "Plymouth installation and configuration complete."
+echo "It is highly recommended to reboot your system now to see the changes take effect during boot."

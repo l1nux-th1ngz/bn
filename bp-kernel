@@ -1,0 +1,75 @@
+#!/bin/bash
+
+# Define colors for output
+YELLOW='\033[0;33m'
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+echo -e "${YELLOW}-----------------------------------------------------------------${NC}"
+echo -e "${YELLOW}Install the latest kernel${NC}"
+echo -e "${YELLOW}-----------------------------------------------------------------${NC}"
+echo ""
+echo -e "This script will install Debian bookworm backports kernel, headers, and firmware if available."
+echo ""
+echo -e "${GREEN}-----------------------------------------------------------------${NC}"
+echo ""
+
+# Check if the backports repository is enabled (optional but good practice)
+if ! grep -q "bookworm-backports" /etc/apt/sources.list /etc/apt/sources.list.d/*; then
+    echo -e "${RED}Warning: The 'bookworm-backports' repository does not appear to be enabled.${NC}"
+    echo -e "${RED}Please ensure it's added to your sources.list before running this script.${NC}"
+    echo ""
+    read -n1 -p " Press any key to quit this dialog ... "
+    exit 1
+fi
+
+# Ask for user confirmation
+read -r -p "Do you want to proceed with installing the kernel from backports? (y/N) " response
+case "$response" in
+    [yY][eE][sS]|[yY])
+        echo ""
+        ;;
+    *)
+        echo -e "${RED}Installation cancelled.${NC}"
+        echo ""
+        read -n1 -p " Press any key to quit this dialog ... "
+        exit 0
+        ;;
+esac
+
+echo "Running apt update..."
+sudo apt update
+
+echo "Installing kernel, headers, and firmware from bookworm-backports..."
+if sudo apt install -t bookworm-backports linux-image-amd64/bookworm-backports linux-headers-amd64/bookworm-backports firmware-linux; then
+    echo ""
+    echo -e "${YELLOW}-----------------------------------------------------------------${NC}"
+    echo -e "${YELLOW}Installation successful!${NC}"
+    echo -e "${YELLOW}-----------------------------------------------------------------${NC}"
+    echo ""
+    echo -e "${YELLOW}Please reboot into your new kernel when able.${NC}"
+    echo ""
+    echo -e "${CYAN}You may need to look in 'Advanced Options' upon reboot if you${NC}"
+    echo -e "${CYAN}have installed a higher numbered kernel version previously.${NC}"
+    echo -e "${CYAN}Grub will boot the highest numbered kernel version automatically.${NC}"
+    echo ""
+    echo "Make Sure Everything works as expected before removing old kernal.........."
+    echo "To remove this kernel, reboot to your old kernel through"
+    echo "the advanced menu at the grub boot screen."
+    echo ""
+else
+    echo ""
+    echo -e "${RED}-----------------------------------------------------------------${NC}"
+    echo -e "${RED}Error: Kernel installation failed.${NC}"
+    echo -e "${RED}Please check the output above for details.${NC}"
+    echo -e "${RED}-----------------------------------------------------------------${NC}"
+    echo ""
+fi
+
+echo ""
+read -n1 -p " Press any key to quit this dialog ... "
+echo "" # Add a newline after the prompt
+
+exit 0

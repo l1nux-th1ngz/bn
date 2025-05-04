@@ -1,0 +1,31 @@
+#!/bin/bash
+
+echo "Updating package lists..."
+sudo apt-get update
+
+echo "Installing essential build tools and dependencies..."
+sudo apt-get -y install software-properties-common
+sudo apt-get -y install linux-headers-amd64
+sudo apt-get -y install linux-headers-$(uname -r)
+sudo apt-get -y install build-essential
+sudo apt-get -y install dkms
+sudo apt-get -y install dirmngr
+sudo apt-get -y install ca-certificates
+sudo apt-get -y install apt-transport-https
+
+# Install libraries
+echo "Installing graphics libraries......"
+sudo apt-get -y install libglvnd-dev
+sudo apt-get -y install pkg-config
+
+# Install NVIDIA-Extras and Nvidia
+sudo apt-get -y install nvidia-detect
+sudo apt-get -y install nvidia-settings 
+sudo apt-get -y install nvidia-smi
+sudo apt-get -y install nvidia-driver
+
+# Install Linux image
+echo "Ensuring correct Linux image is installed..."
+sudo apt-get -y install linux-image-amd64
+
+echo "Installation attempt finished."

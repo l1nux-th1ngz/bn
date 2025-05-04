@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Download script
+echo "Downloading install.sh..."
+wget https://github.com/drewgrif/bookworm-scripts/raw/main/install.sh
+
+# Check if download was successful
+if [ $? -ne 0 ]; then
+    echo "Error downloading install.sh. Exiting."
+    exit 1
+fi
+
+# IMPORTANT: REVIEW THE SCRIPT'S CONTENT BEFORE PROCEEDING!
+echo "Downloaded install.sh. Please review its contents before executing."
+read -p "Press Enter to continue after reviewing..."
+
+# Make the script executable
+echo "Making install.sh executable..."
+chmod +x install.sh
+
+# Execute the script
+echo "Executing install.sh..."
+./install.sh
+
+# Remove the downloaded script
+echo "Removing install.sh..."
+rm install.sh
+
+echo "Script execution complete."

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Check if the script is run as root
+if [ "$EUID" -ne 0 ]; then
+  echo "Please run as root."
+  exit 1
+fi
+
+# Define the LightDM configuration file path
+LIGHTDM_CONF="/etc/lightdm/lightdm.conf"
+
+# Backup the original configuration file
+cp "$LIGHTDM_CONF" "$LIGHTDM_CONF.bak"
+
+# Modify the LightDM configuration
+{
+  echo "[Seat:*]"
+  echo "greeter-show-manual-login=false"
+  echo "allow-guest=false"
+  echo "greeter-hide-users=false"
+} > "$LIGHTDM_CONF"
+
+# Restart LightDM to apply changes
+systemctl restart lightdm
+
+echo "LightDM has been configured to show a list of user accounts."
+echo "Backup of the original configuration file is saved as lightdm.conf.bak."
